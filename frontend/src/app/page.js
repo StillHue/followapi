@@ -12,7 +12,6 @@ import {
   CircularProgress
 } from '@mui/material'
 import { Send, CheckCircle, Error } from '@mui/icons-material'
-import axios from 'axios'
 
 export default function Home() {
   const [loading, setLoading] = useState(false)
@@ -21,7 +20,7 @@ export default function Home() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
 
-  const API_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL || 'https://primary-production-31de.up.railway.app/webhook/followapi'
+  const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL || 'https://primary-production-31de.up.railway.app/webhook/followapi'
 
   const handleSendSMS = async () => {
     if (!phoneNumber || !message) {
@@ -34,16 +33,27 @@ export default function Home() {
     setResult(null)
 
     try {
-      const response = await axios.post(`${API_URL}/sms/send`, {
-        to: phoneNumber,
-        message
-      })
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: phoneNumber,
+          message: message
+        })
+      });
 
-      setResult(response.data)
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao enviar SMS');
+      }
+      setResult(data);
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao enviar SMS')
+      setError(err.message || 'Erro ao enviar SMS');
+      console.error('Error sending SMS:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
